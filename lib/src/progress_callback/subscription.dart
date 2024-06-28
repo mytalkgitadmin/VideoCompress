@@ -1,30 +1,20 @@
-import 'dart:async';
-
-import 'dart:ui';
+typedef UpdateProgressCallback = Function(double progress);
 
 class ObservableBuilder<T> {
-  StreamController<T> _observable = StreamController();
   bool notSubscribed = true;
+  Subscription? _subscription;
 
-  void next(T value) {
-    _observable.add(value);
+  void next(double value) {
+    _subscription?.updateProgressCallback?.call(value);
   }
 
-  Subscription subscribe(void Function(T event) onData,
-      {Function? onError, void Function()? onDone, bool? cancelOnError}) {
+  Subscription subscribe(UpdateProgressCallback? updateProgressCallback) {
     notSubscribed = false;
-    _observable.stream.listen(onData,
-        onError: onError, onDone: onDone, cancelOnError: cancelOnError);
-    return Subscription(() {
-      _observable.close();
-
-      // Create a new instance to avoid errors
-      _observable = StreamController();
-    });
+    return _subscription = Subscription(updateProgressCallback: updateProgressCallback);
   }
 }
 
 class Subscription {
-  final VoidCallback unsubscribe;
-  const Subscription(this.unsubscribe);
+  final UpdateProgressCallback? updateProgressCallback;
+  const Subscription({this.updateProgressCallback});
 }
