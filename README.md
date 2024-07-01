@@ -7,7 +7,9 @@ All video files are encoded in an MP4 container with AAC audio that allows 100% 
 
 Works on ANDROID, IOS and desktop (just MacOS for now).
 
-
+# 수정사항
+- 3.1.2 버전 수정
+- 기존에 listen하는 방식이 아닌 callback 형태로 수정(subscription.dart)
 
 # Table of Contents
   - [Installing](#lets-get-started)
