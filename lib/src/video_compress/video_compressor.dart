@@ -129,36 +129,40 @@ extension Compress on IVideoCompress {
     bool? includeAudio,
     int frameRate = 30,
   }) async {
-    if (isCompressing) {
-      throw StateError('''VideoCompress Error: 
+    try {
+      if (isCompressing) {
+        throw StateError('''VideoCompress Error: 
       Method: compressVideo
       Already have a compression process, you need to wait for the process to finish or stop it''');
-    }
+      }
 
-    if (compressProgress$.notSubscribed) {
-      debugPrint('''VideoCompress: You can try to subscribe to the 
+      if (compressProgress$.notSubscribed) {
+        debugPrint('''VideoCompress: You can try to subscribe to the 
       compressProgress\$ stream to know the compressing state.''');
-    }
+      }
 
-    // ignore: invalid_use_of_protected_member
-    setProcessingStatus(true);
-    final jsonStr = await _invoke<String>('compressVideo', {
-      'path': path,
-      'quality': quality.index,
-      'deleteOrigin': deleteOrigin,
-      'startTime': startTime,
-      'duration': duration,
-      'includeAudio': includeAudio,
-      'frameRate': frameRate,
-    });
+      // ignore: invalid_use_of_protected_member
+      setProcessingStatus(true);
+      final jsonStr = await _invoke<String>('compressVideo', {
+        'path': path,
+        'quality': quality.index,
+        'deleteOrigin': deleteOrigin,
+        'startTime': startTime,
+        'duration': duration,
+        'includeAudio': includeAudio,
+        'frameRate': frameRate,
+      });
 
-    // ignore: invalid_use_of_protected_member
-    setProcessingStatus(false);
+      // ignore: invalid_use_of_protected_member
+      setProcessingStatus(false);
 
-    if (jsonStr != null) {
-      final jsonMap = json.decode(jsonStr);
-      return MediaInfo.fromJson(jsonMap);
-    } else {
+      if (jsonStr != null) {
+        final jsonMap = json.decode(jsonStr);
+        return MediaInfo.fromJson(jsonMap);
+      } else {
+        return null;
+      }
+    } catch (e) {
       return null;
     }
   }
