@@ -74,9 +74,13 @@ public class SwiftVideoCompressPlugin: NSObject, FlutterPlugin {
         return thumbnail.jpegData(compressionQuality: compressionQuality)
     }
     
-    private func getByteThumbnail(_ path: String,_ quality: NSNumber,_ position: NSNumber,_ result: FlutterResult) {
-        if let bitmap = getBitMap(path,quality,position,result) {
-            result(bitmap)
+    private func getByteThumbnail(_ path: String,_ quality: NSNumber,_ position: NSNumber,_ result: @escaping FlutterResult) {
+        // 백그라운드에서 처리하고 항상 result()를 호출 (nil 포함)
+        DispatchQueue.global(qos: .userInitiated).async {
+            let bitmap = self.getBitMap(path, quality, position, result)
+            DispatchQueue.main.async {
+                result(bitmap)  // nil이어도 반드시 호출
+            }
         }
     }
     
@@ -181,7 +185,11 @@ public class SwiftVideoCompressPlugin: NSObject, FlutterPlugin {
         let sourceVideoType = "mp4"
         
         let sourceVideoAsset = avController.getVideoAsset(sourceVideoUrl)
-        let sourceVideoTrack = avController.getTrack(sourceVideoAsset)
+        guard let sourceVideoTrack = avController.getTrack(sourceVideoAsset) else {
+            // track을 가져올 수 없는 경우 (ProRes, Log 등 최신 포맷) → nil 반환
+            result(nil)
+            return
+        }
 
         let uuid = NSUUID()
         let compressionUrl =
@@ -199,8 +207,8 @@ public class SwiftVideoCompressPlugin: NSObject, FlutterPlugin {
         let timeRange: CMTimeRange = CMTimeRangeMake(start: cmStartTime, duration: cmDurationTime)
         
         let isIncludeAudio = includeAudio != nil ? includeAudio! : true
-        
-        let session = getComposition(isIncludeAudio, timeRange, sourceVideoTrack!)
+
+        let session = getComposition(isIncludeAudio, timeRange, sourceVideoTrack)
         
         let exporter = AVAssetExportSession(asset: session, presetName: getExportPreset(quality))!
         

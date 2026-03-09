@@ -9,17 +9,34 @@ class AvController: NSObject {
     
     public func getTrack(_ asset: AVURLAsset)->AVAssetTrack? {
         var track : AVAssetTrack? = nil
-        let group = DispatchGroup()
-        group.enter()
-        asset.loadValuesAsynchronously(forKeys: ["tracks"], completionHandler: {
-            var error: NSError? = nil;
-            let status = asset.statusOfValue(forKey: "tracks", error: &error)
-            if (status == .loaded) {
-                track = asset.tracks(withMediaType: AVMediaType.video).first
+        // group.wait()를 메인 스레드에서 호출하면 데드락 발생 가능.
+        // 백그라운드 스레드에서만 wait하도록 분기 처리.
+        if Thread.isMainThread {
+            let semaphore = DispatchSemaphore(value: 0)
+            DispatchQueue.global(qos: .userInitiated).async {
+                asset.loadValuesAsynchronously(forKeys: ["tracks"], completionHandler: {
+                    var error: NSError? = nil
+                    let status = asset.statusOfValue(forKey: "tracks", error: &error)
+                    if status == .loaded {
+                        track = asset.tracks(withMediaType: AVMediaType.video).first
+                    }
+                    semaphore.signal()
+                })
             }
-            group.leave()
-        })
-        group.wait()
+            _ = semaphore.wait(timeout: .now() + 10)
+        } else {
+            let group = DispatchGroup()
+            group.enter()
+            asset.loadValuesAsynchronously(forKeys: ["tracks"], completionHandler: {
+                var error: NSError? = nil
+                let status = asset.statusOfValue(forKey: "tracks", error: &error)
+                if status == .loaded {
+                    track = asset.tracks(withMediaType: AVMediaType.video).first
+                }
+                group.leave()
+            })
+            group.wait()
+        }
         return track
     }
     
